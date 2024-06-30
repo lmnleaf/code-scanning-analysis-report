@@ -1,11 +1,14 @@
 import { repoCodeScanning } from './repo-code-scanning.js';
+import { processInput } from './process-input.js';
 import * as fs from 'fs';
 
-async function createReport(repos, totalDays, path, context, octokit) {
+async function createReport(actionInput, path, octokit) {
+  const { owner, repos, totalDays } = processInput(actionInput);
+
   let analyses = [];
 
   try {
-    analyses = await repoCodeScanning.getAnalyses(context.repo.owner, repos, totalDays, octokit);
+    analyses = await repoCodeScanning.getAnalyses(owner, repos, totalDays, octokit);
 
     if (analyses.length === 0) {
       return 'No code scanning analyses found.';

@@ -4,9 +4,11 @@ import Moctokit from './support/moctokit.js';
 
 describe('Code Scanning Report', function() {
   let octokit;
-  let repos = ['repo', 'repo1'];
-  let totalDays = 7;
-  let context = { repo: { owner: 'some-owner', repo: 'repo' } };
+  let actionInput = {
+    repos: 'repo,repo1',
+    totalDays: 7,
+    context: { repo: { owner: 'some-owner', repo: 'cool-repo' } }
+  };
   let path = '/home/runner/work/this-repo/this-repo';
   let mockData = [
     {
@@ -64,7 +66,7 @@ describe('Code Scanning Report', function() {
   it ('creates a CSV of alerts', async function() {
     spyOn(repoCodeScanning, 'getAnalyses').and.callThrough();
 
-    await codeScanningReport.createReport(repos, totalDays, path, context, octokit);
+    await codeScanningReport.createReport(actionInput, path, octokit);
 
     expect(octokit.paginate).toHaveBeenCalled();
 
@@ -115,7 +117,7 @@ describe('Code Scanning Report', function() {
   });
 
   it('returns a report summary', async function() {
-    const reportSummary= await codeScanningReport.createReport(repos, totalDays, path, context, octokit);
+    const reportSummary= await codeScanningReport.createReport(actionInput, path, octokit);
 
     expect(reportSummary).toEqual(
       'Total code scanning analyses found: 4. \n' +
@@ -130,7 +132,7 @@ describe('Code Scanning Report', function() {
 
   it('returns a report summary when no code scanning analyses are found', async function() {
     octokit = new Moctokit([]);
-    const reportSummary= await codeScanningReport.createReport(repos, totalDays, path, context, octokit);
+    const reportSummary= await codeScanningReport.createReport(actionInput, path, octokit);
 
     expect(reportSummary).toEqual('No code scanning analyses found.');
   });
@@ -140,7 +142,7 @@ describe('Code Scanning Report', function() {
     let caughtError;
 
     try {
-      await codeScanningReport.createReport(repos, totalDays, path, context, octokitTestError);
+      await codeScanningReport.createReport(actionInput, path, octokitTestError);
     } catch (error) {
       caughtError = error;
     }

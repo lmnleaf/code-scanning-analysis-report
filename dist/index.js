@@ -30988,17 +30988,44 @@ const repoCodeScanning = {
   getAnalyses: getAnalyses
 };
 
+;// CONCATENATED MODULE: ./src/process-input.js
+function processInput (actionInput) {
+  let input = {
+    owner: actionInput.context.repo.owner,
+    repos: [actionInput.context.repo.repo],
+    totalDays: 30
+  }
+
+  if (actionInput.repos != null && actionInput.repos.length > 0) {
+    input.repos = actionInput.repos.split(',');
+  }
+
+  let days = parseInt(actionInput.totalDays);
+  if (days != NaN && days > 0 && days <= 365) {
+    input.totalDays = days;
+  } else if (days != NaN && (days <= 0 || days > 365)) {
+    throw new Error('total_days must be greater than 0 and less than or equal to 365.');
+  }
+
+  return input;
+}
+
+
+
 // EXTERNAL MODULE: external "fs"
 var external_fs_ = __nccwpck_require__(7147);
 ;// CONCATENATED MODULE: ./src/code-scanning-report.js
 
 
 
-async function createReport(repos, totalDays, path, context, octokit) {
+
+async function createReport(actionInput, path, octokit) {
+  const { owner, repos, totalDays } = processInput(actionInput);
+
   let analyses = [];
 
   try {
-    analyses = await repoCodeScanning.getAnalyses(context.repo.owner, repos, totalDays, octokit);
+    analyses = await repoCodeScanning.getAnalyses(owner, repos, totalDays, octokit);
 
     if (analyses.length === 0) {
       return 'No code scanning analyses found.';
@@ -31080,17 +31107,18 @@ const codeScanningReport = {
 
 
 
-const context = github.context;
-
 async function main() {
   const token = core.getInput('TOKEN');
   const octokit = github.getOctokit(token);
-  const repos = core.getInput('repos').split(',');
-  const totalDays = core.getInput('total_days');
   const path = core.getInput('path');
+  const actionInput = {
+    repos: core.getInput('repos'),
+    totalDays: core.getInput('total_days'),
+    context: github.context
+  }
 
   try {
-    const reportSummary = await codeScanningReport.createReport(repos, totalDays, path, context, octokit);
+    const reportSummary = await codeScanningReport.createReport(actionInput, path, octokit);
 
     core.notice(reportSummary);
   } catch (error) {

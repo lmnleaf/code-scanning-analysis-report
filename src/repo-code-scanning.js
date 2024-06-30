@@ -35,7 +35,7 @@ async function getAnalyses (owner, repos, totalDays, octokit) {
 }
 
 function filteredAnalyses(analyses, daysAgo, repo) {
-  let filteredAnalyses = analyses.filter((analysis) => 
+  let filteredAnalyses = analyses.filter((analysis) =>
     new Date(analysis.created_at) >= daysAgo
   );
 
@@ -50,4 +50,6 @@ function filteredAnalyses(analyses, daysAgo, repo) {
   return filteredAnalyses;
 }
 
-export { getAnalyses };
+export const repoCodeScanning = {
+  getAnalyses: getAnalyses
+};

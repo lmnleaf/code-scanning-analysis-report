@@ -1,7 +1,7 @@
-import { getAnalyses } from '../src/analyses.js';
+import { repoCodeScanning } from '../src/repo-code-scanning.js';
 import Moctokit from './support/moctokit.js';
 
-describe('Analyses', function() {
+describe('Repo Code Scanning', function() {
   let octokit;
   let baseTime = new Date(2024, 4, 5);
   let owner = 'some-owner'
@@ -64,7 +64,7 @@ describe('Analyses', function() {
   });
 
   it('gets analyses for the past 7 days', async function () {
-    let analyses = await getAnalyses(owner, repos, 7, octokit);
+    let analyses = await repoCodeScanning.getAnalyses(owner, repos, 7, octokit);
 
     expect(octokit.paginate).toHaveBeenCalled();
     expect(analyses.length).toEqual(2);
@@ -78,7 +78,7 @@ describe('Analyses', function() {
   });
 
   it('gets analyses for the past 15 days', async function () {
-    let analyses = await getAnalyses(owner, repos, 15, octokit);
+    let analyses = await repoCodeScanning.getAnalyses(owner, repos, 15, octokit);
 
     expect(analyses.length).toEqual(4);
     expect(octokit.paginate).toHaveBeenCalled();
@@ -96,7 +96,7 @@ describe('Analyses', function() {
     let caughtError;
 
     try {
-      await getAnalyses(owner, repos, 7, octokitTestError);
+      await repoCodeScanning.getAnalyses(owner, repos, 7, octokitTestError);
     } catch (error) {
       caughtError = error;
     }

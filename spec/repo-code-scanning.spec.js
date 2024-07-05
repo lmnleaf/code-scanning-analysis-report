@@ -91,6 +91,20 @@ describe('Repo Code Scanning', function() {
     expect(analyses[3].repo).toEqual('repo1');
   });
 
+  it('continues to next repo if no analysis found', async function() {
+    let repos = ['repo', 'repo1'];
+    let caughtError = null;
+    let octokitTestError = new Moctokit([], true, 'no analysis found');
+
+    try {
+      await repoCodeScanning.getAnalyses(owner, repos, 7, octokitTestError);
+    } catch (error) {
+      caughtError = error;
+    }
+
+    expect(caughtError).toBeNull();
+  });
+
   it('handles errors', async function() {
     let octokitTestError = new Moctokit([], true);
     let caughtError;

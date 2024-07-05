@@ -2,7 +2,6 @@ async function getAnalyses (owner, repos, totalDays, octokit) {
   let analyses = [];
   const daysAgo = new Date();
 
-  // add a default and error for totalDays
   daysAgo.setDate(new Date().getDate() - totalDays);
 
   for (const repo of repos) {
@@ -27,7 +26,11 @@ async function getAnalyses (owner, repos, totalDays, octokit) {
 
       analyses = analyses.concat(filteredAnalyses(repoAnalyses, daysAgo, repo));
     } catch (error) {
-      throw error;
+      if (error.message.includes('no analysis found')) {
+        continue;
+      } else {
+        throw error;
+      }
     }
   }
 

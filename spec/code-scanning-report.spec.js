@@ -82,7 +82,7 @@ describe('Code Scanning Report', function() {
     const filePath = args[0];
     const fileContent = args[1];
 
-    expect(filePath).toContain('/home/runner/work/this-repo/this-repo/code-scanning-analyses');
+    expect(filePath).toContain('/home/runner/work/this-repo/this-repo/code-scanning-analyses-2024-05-05');
     
     const lines = fileContent.split('\n');
 

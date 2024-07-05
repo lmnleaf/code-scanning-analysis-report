@@ -63,7 +63,7 @@ function writeReport(analyses, path) {
 
   let csvDate = new Date().toISOString().slice(0, 10);
 
-  codeScanningReport.writeFile(path + '/code-scanning-analyses' + csvDate + '.csv', csvRows.join("\r\n"), (error) => {
+  codeScanningReport.writeFile(path + '/code-scanning-analyses-' + csvDate + '.csv', csvRows.join("\r\n"), (error) => {
     console.log(error || "report created successfully");
   });
 }

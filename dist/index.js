@@ -30931,15 +30931,51 @@ var __webpack_exports__ = {};
 var github = __nccwpck_require__(6400);
 // EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
 var core = __nccwpck_require__(8361);
-;// CONCATENATED MODULE: ./src/analyses.js
+;// CONCATENATED MODULE: ./src/org-repos.js
+async function getOrgRepos(org, octokit) {
+  let repoNames = [];
+
+  try {
+    await octokit.paginate(
+      octokit.rest.repos.listForOrg,
+      {
+        org,
+        per_page: 100
+      },
+      (response, done) => {
+        let advancedSecurityRepos = response.data.filter(
+          (repo) => repo.security_and_analysis.advanced_security.status === 'enabled'
+        );
+        repoNames.push(...advancedSecurityRepos.map((repo) => repo.name));
+      }
+  )} catch (error) {
+    throw error;
+  }
+
+  return repoNames;
+}
+
+const orgRepos = {
+  getOrgRepos: getOrgRepos
+}
+
+;// CONCATENATED MODULE: ./src/repo-code-scanning.js
+
+
 async function getAnalyses (owner, repos, totalDays, octokit) {
   let analyses = [];
+  let reposList = [];
   const daysAgo = new Date();
 
-  // add a default and error for totalDays
   daysAgo.setDate(new Date().getDate() - totalDays);
 
-  for (const repo of repos) {
+  if (repos.length === 1 && repos[0] === 'all') {
+    reposList = await orgRepos.getOrgRepos(owner, octokit);
+  } else {
+    reposList = repos;
+  }
+
+  for (const repo of reposList) {
     let repoAnalyses = [];
 
     try {
@@ -30961,7 +30997,11 @@ async function getAnalyses (owner, repos, totalDays, octokit) {
 
       analyses = analyses.concat(filteredAnalyses(repoAnalyses, daysAgo, repo));
     } catch (error) {
-      throw error;
+      if (error.message.includes('no analysis found')) {
+        continue;
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -30969,7 +31009,7 @@ async function getAnalyses (owner, repos, totalDays, octokit) {
 }
 
 function filteredAnalyses(analyses, daysAgo, repo) {
-  let filteredAnalyses = analyses.filter((analysis) => 
+  let filteredAnalyses = analyses.filter((analysis) =>
     new Date(analysis.created_at) >= daysAgo
   );
 
@@ -30984,33 +31024,141 @@ function filteredAnalyses(analyses, daysAgo, repo) {
   return filteredAnalyses;
 }
 
+const repoCodeScanning = {
+  getAnalyses: getAnalyses
+};
 
+;// CONCATENATED MODULE: ./src/process-input.js
+function processInput (actionInput) {
+  let input = {
+    owner: actionInput.context.repo.owner,
+    repos: [actionInput.context.repo.repo],
+    totalDays: 30
+  }
 
-;// CONCATENATED MODULE: ./src/code-scanning-report.js
+  if (actionInput.repos != null && actionInput.repos.length > 0) {
+    input.repos = actionInput.repos.split(',');
+  }
 
+  let days = parseInt(actionInput.totalDays);
+  if (days != NaN && days > 0 && days <= 365) {
+    input.totalDays = days;
+  } else if (days != NaN && (days <= 0 || days > 365)) {
+    throw new Error('total_days must be greater than 0 and less than or equal to 365.');
+  }
 
-async function createReport(repos, totalDays, context, octokit) {
-  let analyses = await getAnalyses(context.repo.owner, repos, totalDays, octokit);
-  console.log(analyses);
+  return input;
 }
 
 
+
+// EXTERNAL MODULE: external "fs"
+var external_fs_ = __nccwpck_require__(7147);
+;// CONCATENATED MODULE: ./src/code-scanning-report.js
+
+
+
+
+async function createReport(actionInput, path, octokit) {
+  const { owner, repos, totalDays } = processInput(actionInput);
+
+  let analyses = [];
+
+  try {
+    analyses = await repoCodeScanning.getAnalyses(owner, repos, totalDays, octokit);
+
+    if (analyses.length === 0) {
+      return 'No code scanning analyses found.';
+    }
+
+    writeReport(analyses, path);
+
+    return reportSummary(analyses, repos);
+  } catch (error) {
+    throw error;
+  }
+}
+
+function writeReport(analyses, path) {
+  const csvRows = analyses.map((analysis) => [
+    analysis.repo,
+    analysis.ref,
+    analysis.commit_sha,
+    analysis.analysis_key,
+    analysis.environment,
+    analysis.category,
+    analysis.error,
+    analysis.created_at,
+    analysis.results_count,
+    analysis.rules_count,
+    analysis.id,
+    analysis.sarif_id,
+    (analysis.tool != null ? analysis.tool.name : null),
+    (analysis.tool != null ? analysis.tool.version : null),
+    analysis.deletable,
+    analysis.warning
+  ]);
+
+  csvRows.unshift([
+    'repo',
+    'ref',
+    'commit_sha',
+    'analysis_key',
+    'environment',
+    'category',
+    'error',
+    'created_at',
+    'results_count',
+    'rules_count',
+    'id',
+    'sarif_id',
+    'tool_name',
+    'tool_version',
+    'deletable',
+    'warning'
+  ]);
+
+  let csvDate = new Date().toISOString().slice(0, 10);
+
+  codeScanningReport.writeFile(path + '/code-scanning-analyses' + csvDate + '.csv', csvRows.join("\r\n"), (error) => {
+    console.log(error || "report created successfully");
+  });
+}
+
+function writeFile (path, data, callback) {
+  external_fs_.writeFile(path, data, callback);
+}
+
+function reportSummary (analyses, repos) {
+  let reportSummary = 'Total code scanning analyses found: ' + analyses.length.toString() + '. \n' +
+    'All org repos reviewed: ' + (repos.length === 1 && repos[0] === 'all' ? 'true' : 'false') + '. \n' +
+    'Repos reviewed: ' + (repos.length === 1 && repos[0] === 'all' ? 'All Org Repos.' : repos.join(', ') + '.');
+
+  return reportSummary;
+}
+
+const codeScanningReport = {
+  writeFile: writeFile,
+  createReport: createReport
+};
 
 ;// CONCATENATED MODULE: ./index.js
 
 
 
 
-const context = github.context;
-
 async function main() {
   const token = core.getInput('TOKEN');
   const octokit = github.getOctokit(token);
-  const repos = core.getInput('repos').split(',');
-  const totalDays = core.getInput('total_days');
+  const path = core.getInput('path');
+  const actionInput = {
+    repos: core.getInput('repos'),
+    totalDays: core.getInput('total_days'),
+    context: github.context
+  }
 
   try {
-    const reportSummary = await createReport(repos, totalDays, context, octokit);
+    const reportSummary = await codeScanningReport.createReport(actionInput, path, octokit);
 
     core.notice(reportSummary);
   } catch (error) {

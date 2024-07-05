@@ -1,11 +1,19 @@
+import { orgRepos } from './org-repos.js';
+
 async function getAnalyses (owner, repos, totalDays, octokit) {
   let analyses = [];
+  let reposList = [];
   const daysAgo = new Date();
 
-  // add a default and error for totalDays
   daysAgo.setDate(new Date().getDate() - totalDays);
 
-  for (const repo of repos) {
+  if (repos.length === 1 && repos[0] === 'all') {
+    reposList = await orgRepos.getOrgRepos(owner, octokit);
+  } else {
+    reposList = repos;
+  }
+
+  for (const repo of reposList) {
     let repoAnalyses = [];
 
     try {
@@ -27,7 +35,11 @@ async function getAnalyses (owner, repos, totalDays, octokit) {
 
       analyses = analyses.concat(filteredAnalyses(repoAnalyses, daysAgo, repo));
     } catch (error) {
-      throw error;
+      if (error.message.includes('no analysis found')) {
+        continue;
+      } else {
+        throw error;
+      }
     }
   }
 
@@ -35,7 +47,7 @@ async function getAnalyses (owner, repos, totalDays, octokit) {
 }
 
 function filteredAnalyses(analyses, daysAgo, repo) {
-  let filteredAnalyses = analyses.filter((analysis) => 
+  let filteredAnalyses = analyses.filter((analysis) =>
     new Date(analysis.created_at) >= daysAgo
   );
 
@@ -50,4 +62,6 @@ function filteredAnalyses(analyses, daysAgo, repo) {
   return filteredAnalyses;
 }
 
-export { getAnalyses };
+export const repoCodeScanning = {
+  getAnalyses: getAnalyses
+};

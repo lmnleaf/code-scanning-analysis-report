@@ -1,7 +1,8 @@
-import { getAnalyses } from '../src/analyses.js';
+import { repoCodeScanning } from '../src/repo-code-scanning.js';
+import { orgRepos } from '../src/org-repos.js';
 import Moctokit from './support/moctokit.js';
 
-describe('Analyses', function() {
+describe('Repo Code Scanning', function() {
   let octokit;
   let baseTime = new Date(2024, 4, 5);
   let owner = 'some-owner'
@@ -64,7 +65,7 @@ describe('Analyses', function() {
   });
 
   it('gets analyses for the past 7 days', async function () {
-    let analyses = await getAnalyses(owner, repos, 7, octokit);
+    let analyses = await repoCodeScanning.getAnalyses(owner, repos, 7, octokit);
 
     expect(octokit.paginate).toHaveBeenCalled();
     expect(analyses.length).toEqual(2);
@@ -78,7 +79,7 @@ describe('Analyses', function() {
   });
 
   it('gets analyses for the past 15 days', async function () {
-    let analyses = await getAnalyses(owner, repos, 15, octokit);
+    let analyses = await repoCodeScanning.getAnalyses(owner, repos, 15, octokit);
 
     expect(analyses.length).toEqual(4);
     expect(octokit.paginate).toHaveBeenCalled();
@@ -91,12 +92,42 @@ describe('Analyses', function() {
     expect(analyses[3].repo).toEqual('repo1');
   });
 
+  it ('gets analyses for all org repos when repos is set to all', async function() {
+    spyOn(orgRepos, 'getOrgRepos').and.returnValue(['repo', 'repo1', 'repo2']);
+    let analyses = await repoCodeScanning.getAnalyses(owner, ['all'], 15, octokit);
+
+    expect(analyses.length).toEqual(6);
+    expect(octokit.paginate).toHaveBeenCalled();
+    expect(orgRepos.getOrgRepos).toHaveBeenCalledWith(owner, octokit);
+  });
+
+  it ('returns an empty array if no analyses are found', async function() {
+    let emptyOctokit = new Moctokit([], false);
+    let analyses = await repoCodeScanning.getAnalyses(owner, repos, 7, emptyOctokit);
+
+    expect(analyses.length).toEqual(0);
+  });
+
+  it('continues to next PR if no analysis found', async function() {
+    let repos = ['repo', 'repo1'];
+    let caughtError = null;
+    let octokitTestError = new Moctokit([], true, 'no analysis found');
+
+    try {
+      await repoCodeScanning.getAnalyses(owner, repos, 7, octokitTestError);
+    } catch (error) {
+      caughtError = error;
+    }
+
+    expect(caughtError).toBeNull();
+  });
+
   it('handles errors', async function() {
     let octokitTestError = new Moctokit([], true);
     let caughtError;
 
     try {
-      await getAnalyses(owner, repos, 7, octokitTestError);
+      await repoCodeScanning.getAnalyses(owner, repos, 7, octokitTestError);
     } catch (error) {
       caughtError = error;
     }

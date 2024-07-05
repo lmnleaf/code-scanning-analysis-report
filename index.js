@@ -1,17 +1,19 @@
 import * as github from '@actions/github';
 import * as core from '@actions/core';
-import { createReport } from './src/code-scanning-report.js';
-
-const context = github.context;
+import { codeScanningReport } from './src/code-scanning-report.js';
 
 async function main() {
   const token = core.getInput('TOKEN');
   const octokit = github.getOctokit(token);
-  const repos = core.getInput('repos').split(',');
-  const totalDays = core.getInput('total_days');
+  const path = core.getInput('path');
+  const actionInput = {
+    repos: core.getInput('repos'),
+    totalDays: core.getInput('total_days'),
+    context: github.context
+  }
 
   try {
-    const reportSummary = await createReport(repos, totalDays, context, octokit);
+    const reportSummary = await codeScanningReport.createReport(actionInput, path, octokit);
 
     core.notice(reportSummary);
   } catch (error) {

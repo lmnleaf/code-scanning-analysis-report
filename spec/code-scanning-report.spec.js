@@ -4,6 +4,7 @@ import Moctokit from './support/moctokit.js';
 
 describe('Code Scanning Report', function() {
   let octokit;
+  let baseTime = new Date(2024, 4, 5);
   let actionInput = {
     repos: 'repo,repo1',
     totalDays: 7,
@@ -18,7 +19,7 @@ describe('Code Scanning Report', function() {
       environment: "{}",
       category: ".github/workflows/code_scanning.yml:build",
       error: "",
-      created_at: "2024-06-28T23:45:27Z",
+      created_at: new Date(baseTime - (24 * 60 * 60 * 1000 * 5)).toISOString(),
       results_count: 1,
       rules_count: 73,
       id: 240562790,
@@ -39,7 +40,7 @@ describe('Code Scanning Report', function() {
       environment: "{}",
       category: ".github/workflows/code_scanning.yml:build",
       error: "some error",
-      created_at: "2024-06-25T22:05:24Z",
+      created_at: new Date(baseTime - (24 * 60 * 60 * 1000 * 5)).toISOString(),
       results_count: 2,
       rules_count: 125,
       id: 238593203,
@@ -57,10 +58,17 @@ describe('Code Scanning Report', function() {
 
   beforeEach(() => {
     octokit = new Moctokit(mockData);
+    jasmine.clock().install();
+    jasmine.clock().mockDate(baseTime);
 
     codeScanningReport.writeFile = jasmine.createSpy('writeFile').and.callFake((path, data, callback) => {
       callback(null); // Simulate successful write operation
+
     });
+  });
+
+  afterEach(function () {
+    jasmine.clock().uninstall();
   });
 
   it ('creates a CSV of alerts', async function() {
@@ -89,28 +97,28 @@ describe('Code Scanning Report', function() {
    expect(lines[1]).toContain(
     'repo,refs/pull/12/merge,9b56bf4dc03585d3658cb7ec38914df6468f1637,' +
     '.github/workflows/code_scanning.yml:build,{},.github/workflows/code_scanning.yml:build,,' +
-    '2024-06-28T23:45:27Z,' +
+    '2024-04-30T06:00:00.000Z,' +
     '1,73,240562790,7f41aa7a-35a8-11ef-83c6-a7ccb61c4c9f,' +
     'CodeQL,2.17.6,true'
    )
    expect(lines[2]).toContain(
     'repo,refs/heads/branch-name,c59c288f88d6858d2a6576d14d79ea743c0f6978,' + 
     '.github/workflows/code_scanning.yml:build,{},.github/workflows/code_scanning.yml:build,some error,' +
-    '2024-06-25T22:05:24Z,' +
+    '2024-04-30T06:00:00.000Z,' +
     '2,125,238593203,05e46f3e-333f-11ef-8278-f9bcf05666d7,' +
     'SomeOtherTool,1.0.0,true,some warning'
    )
    expect(lines[3]).toContain(
     'repo1,refs/pull/12/merge,9b56bf4dc03585d3658cb7ec38914df6468f1637,' +
     '.github/workflows/code_scanning.yml:build,{},.github/workflows/code_scanning.yml:build,,' +
-    '2024-06-28T23:45:27Z,' +
+    '2024-04-30T06:00:00.000Z,' +
     '1,73,240562790,7f41aa7a-35a8-11ef-83c6-a7ccb61c4c9f,' +
     'CodeQL,2.17.6,true'
    )
    expect(lines[4]).toContain(
     'repo1,refs/heads/branch-name,c59c288f88d6858d2a6576d14d79ea743c0f6978,' + 
     '.github/workflows/code_scanning.yml:build,{},.github/workflows/code_scanning.yml:build,some error,' +
-    '2024-06-25T22:05:24Z,' +
+    '2024-04-30T06:00:00.000Z,' +
     '2,125,238593203,05e46f3e-333f-11ef-8278-f9bcf05666d7,' +
     'SomeOtherTool,1.0.0,true,some warning'
    )

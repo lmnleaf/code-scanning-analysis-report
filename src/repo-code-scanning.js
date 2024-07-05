@@ -1,10 +1,19 @@
+import { orgRepos } from './org-repos.js';
+
 async function getAnalyses (owner, repos, totalDays, octokit) {
   let analyses = [];
+  let reposList = [];
   const daysAgo = new Date();
 
   daysAgo.setDate(new Date().getDate() - totalDays);
 
-  for (const repo of repos) {
+  if (repos.length === 1 && repos[0] === 'all') {
+    reposList = await orgRepos.getOrgRepos(owner, octokit);
+  } else {
+    reposList = repos;
+  }
+
+  for (const repo of reposList) {
     let repoAnalyses = [];
 
     try {

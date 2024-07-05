@@ -2,7 +2,10 @@ class Moctokit {
   constructor(mockData = [], error = false, errorMessage = 'fetch error') {
     this.rest = {
       codeScanning: {
-        listRecentAnalyses: this.listRecentAnalyses,
+        listRecentAnalyses: this.listRecentAnalyses
+      },
+      repos: {
+        listForOrg: this.listForOrg
       }
     };
     this.paginate = this.mockPaginate;

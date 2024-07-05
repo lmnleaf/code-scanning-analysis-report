@@ -134,10 +134,6 @@ describe('Code Scanning Report', function() {
     );
   });
 
-  // add the code and spec for this later - will need to grab all repos from the org
-  xit ('returns a report summary that includes all org repos', async function() {
-  });
-
   it('returns a report summary when no code scanning analyses are found', async function() {
     octokit = new Moctokit([]);
     const reportSummary= await codeScanningReport.createReport(actionInput, path, octokit);

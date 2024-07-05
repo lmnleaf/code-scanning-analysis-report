@@ -1,4 +1,5 @@
 import { repoCodeScanning } from '../src/repo-code-scanning.js';
+import { orgRepos } from '../src/org-repos.js';
 import Moctokit from './support/moctokit.js';
 
 describe('Repo Code Scanning', function() {
@@ -91,7 +92,23 @@ describe('Repo Code Scanning', function() {
     expect(analyses[3].repo).toEqual('repo1');
   });
 
-  it('continues to next repo if no analysis found', async function() {
+  it ('gets analyses for all org repos when repos is set to all', async function() {
+    spyOn(orgRepos, 'getOrgRepos').and.returnValue(['repo', 'repo1', 'repo2']);
+    let analyses = await repoCodeScanning.getAnalyses(owner, ['all'], 15, octokit);
+
+    expect(analyses.length).toEqual(6);
+    expect(octokit.paginate).toHaveBeenCalled();
+    expect(orgRepos.getOrgRepos).toHaveBeenCalledWith(owner, octokit);
+  });
+
+  it ('returns an empty array if no analyses are found', async function() {
+    let emptyOctokit = new Moctokit([], false);
+    let analyses = await repoCodeScanning.getAnalyses(owner, repos, 7, emptyOctokit);
+
+    expect(analyses.length).toEqual(0);
+  });
+
+  it('continues to next PR if no analysis found', async function() {
     let repos = ['repo', 'repo1'];
     let caughtError = null;
     let octokitTestError = new Moctokit([], true, 'no analysis found');

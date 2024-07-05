@@ -30931,15 +30931,51 @@ var __webpack_exports__ = {};
 var github = __nccwpck_require__(6400);
 // EXTERNAL MODULE: ./node_modules/@actions/core/lib/core.js
 var core = __nccwpck_require__(8361);
+;// CONCATENATED MODULE: ./src/org-repos.js
+async function getOrgRepos(org, octokit) {
+  let repoNames = [];
+
+  try {
+    await octokit.paginate(
+      octokit.rest.repos.listForOrg,
+      {
+        org,
+        per_page: 100
+      },
+      (response, done) => {
+        let advancedSecurityRepos = response.data.filter(
+          (repo) => repo.security_and_analysis.advanced_security.status === 'enabled'
+        );
+        repoNames.push(...advancedSecurityRepos.map((repo) => repo.name));
+      }
+  )} catch (error) {
+    throw error;
+  }
+
+  return repoNames;
+}
+
+const orgRepos = {
+  getOrgRepos: getOrgRepos
+}
+
 ;// CONCATENATED MODULE: ./src/repo-code-scanning.js
+
+
 async function getAnalyses (owner, repos, totalDays, octokit) {
   let analyses = [];
+  let reposList = [];
   const daysAgo = new Date();
 
-  // add a default and error for totalDays
   daysAgo.setDate(new Date().getDate() - totalDays);
 
-  for (const repo of repos) {
+  if (repos.length === 1 && repos[0] === 'all') {
+    reposList = await orgRepos.getOrgRepos(owner, octokit);
+  } else {
+    reposList = repos;
+  }
+
+  for (const repo of reposList) {
     let repoAnalyses = [];
 
     try {
@@ -30961,7 +30997,11 @@ async function getAnalyses (owner, repos, totalDays, octokit) {
 
       analyses = analyses.concat(filteredAnalyses(repoAnalyses, daysAgo, repo));
     } catch (error) {
-      throw error;
+      if (error.message.includes('no analysis found')) {
+        continue;
+      } else {
+        throw error;
+      }
     }
   }
 

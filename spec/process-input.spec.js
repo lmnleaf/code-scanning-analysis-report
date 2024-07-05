@@ -46,10 +46,10 @@ describe('Process Input', function() {
     expect(input.totalDays).toEqual(7);
   });
 
-  xit('processes input when repos is set to `all`', async function() {
+  it('processes input when repos is set to `all`', async function() {
     let actionInput = {
-      repos: 'woot,cool',
-      totalDays: 7,
+      repos: 'all',
+      totalDays: null,
       context: context
     };
 
